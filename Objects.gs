@@ -8,8 +8,8 @@ class Update{
   static createFrom(json){
     let obj = new Update(json.update_id);
 
-    obj.callback_query = ("callback_query" in json) ? CallbackQuery.createFrom(json.callback_query) : null;
-    obj.message = ("callback_query" in json) ? Message.createFrom(json.callback_query.message) : Message.createFrom(json.message);
+    obj.callback_query = ("callback_query" in json && json.callback_query != null) ? CallbackQuery.createFrom(json.callback_query) : null;
+    obj.message = ("callback_query" in json && json.callback_query != null) ? Message.createFrom(json.callback_query.message) : Message.createFrom(json.message);
 
     return obj;
   }
@@ -51,8 +51,8 @@ class Message{
       obj.from = User.createFrom(json.from);
       obj.date = new Date();
       obj.text = json.text;
-      obj.document = ("document" in json) ? Document.createFrom(json.document) : null;
-      obj.reply_markup = ("reply_markup" in json) ? KeyboardMarkup.createInlineKeyboard(json.reply_markup) : null;
+      obj.document = ("document" in json && json.document != null) ? Document.createFrom(json.document) : null;
+      obj.reply_markup = ("reply_markup" in json && json.reply_markup != null) ? KeyboardMarkup.createInlineKeyboard(json.reply_markup) : null;
 
       return obj;
     }
@@ -222,6 +222,7 @@ class Spreadsheet{
 
   static createSheet(name){
     CURRENT_SPREAD_SHEET.insertSheet(String(name));
+    Spreadsheet.formatSheet(name);
   }
 
   static writeGptResponse(sheetName,data){
@@ -234,6 +235,39 @@ class Spreadsheet{
 
     return "success"
   }
+
+  static formatSheet(sheetname){
+    var sheet = CURRENT_SPREAD_SHEET.getSheetByName(sheetname);
+
+    sheet.appendRow(["User role",	"user message"	,"ai role"	,"ai message",	"message id"]);
+
+    var range = sheet.getRange("A:E");
+
+    // Устанавливаем шрифт
+    var font = range.getFontFamily();
+    if (font !== "Source Code Pro") {
+      range.setFontFamily("Source Code Pro");
+    }
+    // Устанавливаем размер шрифта
+    var fontSize = range.getFontSize();
+    if (fontSize !== 8) {
+      range.setFontSize(8);
+    }
+    // Устанавливаем выравнивание текста
+    range.setHorizontalAlignment("left");
+    // Устанавливаем обязательный перенос в случае нехватки строки
+    range.setWrap(true);
+    // Устанавливаем цвет фона
+    range.setBackground("beige");
+    // Устанавливаем границы
+    range.setBorder(true, true, true, true, true, true);
+    // Устанавливаем размеры столбцов
+    sheet.setColumnWidth(1, 100);
+    sheet.setColumnWidth(2, 600);
+    sheet.setColumnWidth(3, 100);
+    sheet.setColumnWidth(4, 600);
+    sheet.setColumnWidth(5, 250);
+  } 
 }
 
 class UserHelper{
@@ -287,10 +321,12 @@ class UserHelper{
 
     this.appendNewUser = function(chatId,username){
       let sheet = CURRENT_SPREAD_SHEET.getSheetByName(sheetname);
-
+    
       if(this.isUserExists(username))
         return;
       
+      this.formatSheet(username);
+
       sheet.appendRow([chatId,username]);
     }
   }
