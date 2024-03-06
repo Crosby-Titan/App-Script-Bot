@@ -14,6 +14,10 @@ function messageHandler(message,checker) {
       checker.setUserStatus(message.from.username,"AWAIT_GPT_REQUEST");
       TelegramApi.sendMessage(message.chat.id,"Введите запрос");
       break;
+    case "/createimage":
+      checker.setUserStatus(message.from.username,"AWAIT_DALL-E_REQUEST");
+      TelegramApi.sendMessage(message.chat.id,"Введите описание картинки");
+      break;
     case "/createlink":
       checker.setUserStatus(message.from.username,"AWAIT_FILE_FOR_LINK_REQUEST");
       TelegramApi.sendMessage(message.chat.id,"Отправьте файл (Если изображение , то отправляйте как документ (на телефонах) или не сжимайте изображение (на пк))");
@@ -48,6 +52,21 @@ async function statusHandler(update,checker,username){
       break;
     case "AWAIT_CALLBACK_REQUEST":
       await callbackHandler(update,checker);
+      break;
+    case "AWAIT_DALL-E_REQUEST":  
+
+      if(update.callback_query != null ||update.message.text.startsWith("/")){
+        checker.setUserStatus(username,"NONE");
+        statusHandler(update,checker,username);
+        return;
+      }
+
+      (await dallEHandler(update.message.text)).data.forEach(
+        (val)=>
+          { 
+            TelegramApi.sendPhoto(update.message.chat.id,val.url); 
+            val.loadImage();
+          });
       break;
     case "NONE":
     default:
@@ -138,6 +157,12 @@ async function openAiHandler(user,query_text){
 
   return data.gpt.message;
 
+}
+
+async function dallEHandler(query_text){
+  let client = new DallEClient(OPEN_AI_KEY,OPEN_AI_IMAGE_GENERATE_URL,IMAGE_AI_MODEL);
+
+  return await client.sendRequestAsync(query_text);
 }
 
 function fileHandler(update,checker){
