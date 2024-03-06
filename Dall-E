@@ -1,0 +1,64 @@
+class DallEClient{
+  constructor(api_key,requestUrl,model){
+    this.model = model;
+    this.url = requestUrl;
+    this.fetch = function(data){
+      return UrlFetchApp.fetch(this.url,{
+        "method": "post",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${api_key}`
+        },
+        "payload": JSON.stringify(data),
+        "muteHttpExceptions": true
+      })
+    }
+    
+    this.sendRequest = function(request){
+      let response =  JSON.parse(this.fetch(new DallERequest(this.model,request)).getContentText());
+
+      Logger.log(response);
+
+      return DallEResponse.createFrom(response);
+    }
+
+    this.sendRequestAsync = async function(request){
+      return await Promise.resolve(this.sendRequest(request));
+    }
+  }
+}
+
+class DallERequest{
+  constructor(model,prompt){
+    this.model = model;
+    this.prompt = prompt;
+  }
+}
+
+class DallEResponse{
+  constructor(created,data){
+    this.created = created;
+    this.data = Array.from((()=>{ 
+      let images = [];
+
+      for(let i = 0;i < data.length;i++){
+        images.push(new DallEImage(data[i].url,`dall-e-image-${new Date(created).getUTCDate()}_${Random.getRandom()}`))
+      }
+
+      return images;
+    })());
+  }
+
+  static createFrom(json){
+    return new DallEResponse(json.created,json.data);
+  }
+}
+
+class DallEImage{
+  constructor(url,filename){
+    this.url = url;
+    this.loadImage = function(){
+      return DriveApp.getFolderById(FOLDER_ID).createFile(UrlFetchApp.fetch(this.url).getBlob()).setName(filename);
+    }
+  }
+}
